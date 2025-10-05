@@ -40,12 +40,10 @@ ENV/
 # macOS
 .DS_Store
 
-# Large dataset files (optional)
-# data/*.csv
-# data/*.parquet
-
-# Model files (optional - uncomment if models are too large)
-# models/*.pkl
+# Large files exceeding GitHub limits
+models/bias_regressor.pkl
+data/bead_full_dataset.csv
+data/bead_full_dataset.parquet
 
 # Logs
 *.log
