@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Bias Detection</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            resize: vertical;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 5px;
+            display: none;
+        }
+        .neutral { background: #d4edda; border-left: 5px solid #28a745; }
+        .biased { background: #f8d7da; border-left: 5px solid #dc3545; }
+        .loading {
+            text-align: center;
+            color: #666;
+            display: none;
+        }
+        .probabilities {
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        .prob-bar {
+            background: #e9ecef;
+            height: 20px;
+            border-radius: 10px;
+            margin: 5px 0;
+            overflow: hidden;
+        }
+        .prob-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 News Bias Detection & Summarization</h1>
+        <p>Enter a news article below to analyze its bias level and get a summary:</p>
+        
+        <textarea id="textInput" placeholder="Paste your news article text here..."></textarea>
+        
+        <button onclick="analyzeText()">Analyze Bias</button>
+        
+        <div class="loading" id="loading">
+            <p>Analyzing text...</p>
+        </div>
+        
+        <div class="result" id="result">
+            <h3>📊 Bias Analysis:</h3>
+            <div id="prediction"></div>
+            <div id="bias-percentage"></div>
+            <div id="confidence"></div>
+            <div class="probabilities" id="probabilities"></div>
+            
+            <h3>📝 Summary:</h3>
+            <div id="summary" style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 5px; line-height: 1.6;"></div>
+        </div>
+    </div>
+
+    <script>
+        async function analyzeText() {
+            const text = document.getElementById('textInput').value.trim();
+            
+            if (!text) {
+                alert('Please enter some text to analyze');
+                return;
+            }
+            
+            // Show loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+            
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: text })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                
+                displayResult(data);
+                
+            } catch (error) {
+                alert('Error analyzing text: ' + error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+        
+        function displayResult(data) {
+            const resultDiv = document.getElementById('result');
+            const predictionDiv = document.getElementById('prediction');
+            const biasPercentageDiv = document.getElementById('bias-percentage');
+            const confidenceDiv = document.getElementById('confidence');
+            const probabilitiesDiv = document.getElementById('probabilities');
+            const summaryDiv = document.getElementById('summary');
+            
+            // Set result class based on prediction
+            resultDiv.className = 'result';
+            if (data.bias.prediction === 'Neutral') {
+                resultDiv.classList.add('neutral');
+            } else if (data.bias.prediction === 'Biased') {
+                resultDiv.classList.add('biased');
+            }
+            
+            // Display bias prediction
+            predictionDiv.innerHTML = `<strong>Bias Level:</strong> ${data.bias.prediction}`;
+            biasPercentageDiv.innerHTML = `<strong>Bias Percentage:</strong> ${data.bias.bias_percentage}%`;
+            confidenceDiv.innerHTML = `<strong>Confidence:</strong> ${(data.bias.confidence * 100).toFixed(1)}%`;
+            
+            // Display probabilities
+            let probHtml = '<strong>Detailed Probabilities:</strong><br>';
+            for (const [label, prob] of Object.entries(data.bias.probabilities)) {
+                const percentage = (prob * 100).toFixed(1);
+                let color = '#6c757d';
+                if (label === 'Neutral') color = '#28a745';
+                else if (label === 'Biased') color = '#dc3545';
+                
+                probHtml += `
+                    <div style="margin: 8px 0;">
+                        <span>${label}: ${percentage}%</span>
+                        <div class="prob-bar">
+                            <div class="prob-fill" style="width: ${percentage}%; background-color: ${color};"></div>
+                        </div>
+                    </div>
+                `;
+            }
+            probabilitiesDiv.innerHTML = probHtml;
+            
+            // Display summary
+            summaryDiv.innerHTML = data.summary;
+            
+            resultDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
